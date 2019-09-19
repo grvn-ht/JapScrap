@@ -1,0 +1,235 @@
+from selenium import webdriver
+from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
+import sys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import webbrowser
+import re
+import requests
+import urllib.request
+
+timeout=30
+Xpathc="//select[@id='chapters']/option"
+Xpathp="//select[@id='pages']/option"
+Xpathi="//div[@id='image']/a/img"
+Xpathi2="//div[@id='image']"
+#.get_attribute("data-src")
+
+
+url="https://www.japscan.to/lecture-en-ligne/dreamland/187/"
+
+
+##########################################################################################"
+##########################################################################################"
+##########################################################################################"
+##########################################################################################"
+#IL MANQUE LA GESTION DES PAGES CRIPTES AINSI QUE LA GESTION DES JPG 404 NOT FOUND!!!!!!!!!
+##########################################################################################"
+##########################################################################################"
+##########################################################################################"
+##########################################################################################"
+#Page 404 -> requests avec beautifullsoup ou scrappy et regarder la balise title si il y a 404
+#Pages cryptées -> Utiliser Canvas avec JavaScript pour découper et réagencer l'image
+
+
+
+
+
+#ATTENTION POUR VOLUME 14 Volume-14/004-dreamland-t14-004.jpg IL Y A DEUX VALEURS À INDENTER
+#COMPARER ENTRE PREMIERE ET DERNIÈRE VOIR LES CHANGEMENTS ET LES CHANGER AUTOMATIQUEMENT
+
+
+
+
+def demande_url_manga ():
+    url_manga = input("Entrez un url visant un tome du manga désiré sur japscan:")
+    return(url_manga)
+
+def demande_tome_a_scrap (Xpathc,timeout,url):
+    path_os = "/usr/local/bin/geckodriver"
+    sys.path.append(path_os)
+    path_driver = "/usr/lib/firefox-esr/firefox-esr"
+    binary = FirefoxBinary(path_driver)
+    driver = webdriver.Firefox(firefox_binary=binary)
+    driver.get(url)
+
+    find = EC.presence_of_element_located((By.XPATH,Xpathc))
+    WebDriverWait(driver, timeout).until(find)
+    b=driver.find_elements_by_xpath(Xpathc) 
+    url2=[]
+    for ix in b:
+        url2.append(ix)
+    url2.reverse()
+    list_tome=url2
+    list_tome_visible=[]
+    for t in list_tome:
+        list_tome_visible.append(t.get_attribute("innerHTML"))
+    
+    print("Voici les tomes disponnibles:")
+    print(list_tome_visible)
+    tome_choisi = input("Recopiez le nom du tome que vous désirez lire:")
+    
+    for t in list_tome:
+        if (t.get_attribute("innerHTML")==tome_choisi):
+            tome_choisi_url=t.get_attribute("value")
+    driver.close()
+            
+    return(tome_choisi_url)
+
+
+def find_template_url_image(Xpathp,Xpathi,Xpathi2,timeout,tome):
+    url = "https://www.japscan.to"+tome+"1.html"
+    path_os = "/usr/local/bin/geckodriver"
+    sys.path.append(path_os)
+    path_driver = "/usr/lib/firefox-esr/firefox-esr"
+    binary = FirefoxBinary(path_driver)
+    driver = webdriver.Firefox(firefox_binary=binary)
+    driver.get(url)
+    
+    find = EC.presence_of_element_located((By.XPATH,Xpathp))
+    WebDriverWait(driver, timeout).until(find)
+    a=driver.find_elements_by_xpath(Xpathp) 
+    nombre_page=len(a)
+    
+    try:
+            find = EC.presence_of_element_located((By.XPATH,Xpathi))
+            WebDriverWait(driver, timeout).until(find)
+            c=driver.find_element_by_xpath(Xpathi)
+            lien_image=None
+            while lien_image is None :
+                lien_image = c.get_attribute("src")
+            i=1
+    except:
+            find = EC.presence_of_element_located((By.XPATH,Xpathi2))
+            WebDriverWait(driver, timeout).until(find)
+            c=driver.find_element_by_xpath(Xpathi2)
+            lien_image=None
+            while lien_image is None :
+                lien_image = c.get_attribute("data-src")
+            i=2
+    url_fin = "https://www.japscan.to"+tome+str(nombre_page)+".html"
+    driver.get(url_fin)
+
+    try:
+            find = EC.presence_of_element_located((By.XPATH,Xpathi))
+            WebDriverWait(driver, timeout).until(find)
+            c=driver.find_element_by_xpath(Xpathi)
+            lien_image_fin=None
+            while lien_image_fin is None :
+                lien_image_fin = c.get_attribute("src")
+            i=1
+    except:
+            find = EC.presence_of_element_located((By.XPATH,Xpathi2))
+            WebDriverWait(driver, timeout).until(find)
+            c=driver.find_element_by_xpath(Xpathi2)
+            lien_image_fin=None
+            while lien_image_fin is None :
+                lien_image_fin = c.get_attribute("data-src")
+            i=2
+
+
+    driver.close()
+    return([lien_image,nombre_page,i,lien_image_fin])
+
+def get_fin_url(url):
+    pat= '[a-z|0-9]+[.](...)$' 
+    f = re.search(pat, url)
+    fin_url=f.group()
+    return(fin_url)
+
+def get_numeric_fin_url(fin_url):
+    indi=re.search('[0-9]{1,10000}',fin_url)
+    indice=indi.group()
+    return(indice)
+
+def get_string_fin_url(fin_url):
+    stri=re.search('[a-z|0-9]+[.]',fin_url)
+    c=stri.group()
+    cg=re.search('[a-z]{1,100}',c)
+    if(cg is None):
+        chars=None
+    else :
+        chars=cg.group()
+    return(chars)
+
+def create_list_jpg(lien_image,nombre_page,lien_image_fin):
+    list_jpg=[]
+    fin=get_fin_url(lien_image_fin)
+    ind=get_numeric_fin_url(fin)
+    print(ind)
+    print(nombre_page)
+    if( (int(ind)-nombre_page) < 6 ):
+        f = get_fin_url(lien_image)
+        print(f)
+        i=get_numeric_fin_url(f)
+        print(i)
+        stri=get_string_fin_url(f)
+        print(stri)
+        
+        if(stri is None):
+            stri=""
+        print(stri)  
+        n=len(i)
+        url_bef=lien_image.replace(f,"")
+        print(url_bef)
+        for j in range(nombre_page):
+            b="{0:0="+str(n)+"d}"
+            indi_url=b.format(j+1)
+            url_new=url_bef+stri+indi_url+".jpg"
+            list_jpg.append(url_new)
+    else:
+        return(print("fichier crypté"))
+            
+    return(list_jpg)
+
+#l=["https://c.japscan.to/lel/Dreamland/Volume-8/29.jpg","https://c.japscan.to/lel/Dreamland/Volume-8/29.jpg"]
+#écrire script html depuis list d'url
+#########################################################################""
+def url_to_html(l,path_url,i):
+    f = open(path_url,'w')
+    if(i==2):
+        return(print("les images sont chiffrées"))
+    else:
+        message = """<html>
+        <head>
+         <style type="text/css">
+          .center {
+          display: block;
+          margin-left: auto;
+          margin-right: auto;
+          width: 50%;
+          } 
+         </style>
+        </head>
+        <body>
+        """
+        f.write(message)
+        
+        for u in l:
+            
+            x=["<img src="," class=\"center\">"]
+            x=u.join(x)
+            f.write(x)
+        
+        message2 = """
+        <body>
+        <html>
+        """
+        f.write(message2)
+        
+        f.close()
+#########################################################################""
+
+def final(Xpathp,Xpathi,Xpathi2,Xpathc,timeout):
+    path_html="/home/gu/Documents/manga/manga.html"
+    url = demande_url_manga()
+    tome = demande_tome_a_scrap (Xpathc,timeout,url)
+    a=find_template_url_image(Xpathp,Xpathi,Xpathi2,timeout,tome)
+    l=create_list_jpg(a[0],a[1],a[3])
+    url_to_html(l,path_html,a[2])
+    webbrowser.open_new_tab(path_html)
+
+
+
+final(Xpathp,Xpathi,Xpathi2,Xpathc,timeout)
