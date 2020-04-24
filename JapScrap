@@ -1,3 +1,10 @@
+########################
+########################
+Ne fonctionne plus depuis que le site à hébergé ses images sur un serveur privé: c.japscan.co
+########################
+########################
+
+
 from selenium import webdriver
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 import sys
